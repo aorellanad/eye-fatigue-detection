@@ -84,11 +84,11 @@ def auto_score(avg_blinks):
 
 def auto_label(score):
     if score <= 2:
-        return "Normal"
+        return "no_fatigue"
     elif score == 3:
-        return "Moderate"
+        return "moderate_fatigue"
     else:
-        return "Tired"
+        return "high_fatigue"
 
 
 df["auto_score"] = df["avg_blinks_per_min"].apply(auto_score)
