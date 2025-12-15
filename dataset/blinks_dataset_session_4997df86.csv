@@ -1,5 +1,0 @@
-session_id,participant_id,date,time_of_day,minute_index,blink_count,blink_rate,raw_blink_timestamps,total_blinks,avg_blinks,std_blinks,age,glasses,hours_sleep,caffeine_last_6h,task,lighting,self_report_score,self_report_label,auto_score,auto_label,notes
-4997df86,P01,2025-12-11,08:00:43,1,2,2,"[1765458000.029475, 1765458037.34048]",,,,30,yes,6,no,work,neutral,,,,,
-4997df86,P01,2025-12-11,08:01:43,2,5,5,"[1765458044.388823, 1765458044.513592, 1765458044.7588758, 1765458045.292913, 1765458046.60423]",,,,30,yes,6,no,work,neutral,,,,,
-4997df86,P01,2025-12-11,08:02:43,3,3,3,"[1765458125.3008509, 1765458125.793071, 1765458151.9955049]",,,,30,yes,6,no,work,neutral,,,,,
-4997df86,P01,2025-12-11,08:03:43,4,2,2,"[1765458207.3850281, 1765458207.712687]",,,,30,yes,6,no,work,neutral,,,,,

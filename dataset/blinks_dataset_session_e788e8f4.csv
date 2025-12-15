@@ -1,7 +1,0 @@
-session_id,participant_id,date,time_of_day,minute_index,blink_count,blink_rate,raw_blink_timestamps,total_blinks,avg_blinks,std_blinks,age,glasses,hours_sleep,caffeine_last_6h,task,lighting,self_report_score,self_report_label,auto_score,auto_label,notes
-e788e8f4,P01,2025-12-10,15:13:24,1,1,1,[1765397548.951298],,,,30,yes,7,yes,work,neutral,,,,,
-e788e8f4,P01,2025-12-10,15:14:24,2,1,1,[1765397607.588944],,,,30,yes,7,yes,work,neutral,,,,,
-e788e8f4,P01,2025-12-10,15:15:24,3,4,4,"[1765397668.518614, 1765397702.5008168, 1765397709.8414981, 1765397712.954138]",,,,30,yes,7,yes,work,neutral,,,,,
-e788e8f4,P01,2025-12-10,15:16:24,4,0,0,[],,,,30,yes,7,yes,work,neutral,,,,,
-e788e8f4,P01,2025-12-10,15:17:24,5,4,4,"[1765397792.8216121, 1765397809.7550552, 1765397810.052453, 1765397812.093942]",,,,30,yes,7,yes,work,neutral,,,,,
-e788e8f4,P01,2025-12-10,15:17:43,session_summary,,,"[1765397548.9512992, 1765397607.588945, 1765397668.518615, 1765397702.5008168, 1765397709.8414981, 1765397712.954138, 1765397792.821613, 1765397809.7550552, 1765397810.052454, 1765397812.093943]",10,2.00,1.67,30,yes,7,yes,work,neutral,4,tired,1,normal,baseline_blinks=7; notes=
