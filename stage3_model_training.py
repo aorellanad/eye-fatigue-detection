@@ -23,12 +23,19 @@ import seaborn as sns
 # load dataset
 # ==========================
 DATASET_PATH = "dataset/training_dataset.csv"
-df = pd.read_csv(DATASET_PATH)
+df = pd.read_csv(DATASET_PATH, sep=";")
+
+FATIGUE_LABELS = {
+    0: "No fatigue",
+    1: "Slight fatigue",
+    2: "Moderated fatigue",
+    3: "High fatigue"
+}
 
 # ========================
 # set target and features
 # ========================
-TARGET = "auto_label"
+TARGET = "self_report_final_score"
 
 FEATURES = [
     "age",
@@ -38,11 +45,12 @@ FEATURES = [
     "task",
     "lighting",
 
+    "session_minutes",
     "baseline_blinks",
+    "blink_baseline_ratio",
     "total_blinks",
-    "avg_blinks_per_min",
-    "std_blinks_per_min",
-    "blink_baseline_ratio"
+    "avg_blinks",
+    "std_blinks",
 ]
 
 X = df[FEATURES]
@@ -54,18 +62,19 @@ y = df[TARGET]
 numeric_features = [
     "age",
     "hours_sleep",
+    "session_minutes",
     "baseline_blinks",
+    "blink_baseline_ratio",
     "total_blinks",
-    "avg_blinks_per_min",
-    "std_blinks_per_min",
-    "blink_baseline_ratio"
+    "avg_blinks",
+    "std_blinks",
 ]
 
 categorical_features = [
     "glasses",
     "caffeine_last_6h",
     "task",
-    "lighting"
+    "lighting",
 ]
 
 # =================
@@ -93,6 +102,7 @@ X_train, X_test, y_train, y_test = train_test_split(
     X, y,
     test_size=0.2,
     random_state=42,
+    stratify=y
 )
 
 # ==============
@@ -144,14 +154,20 @@ for name, model in models.items():
     print("F1-score:", f1)
 
     print("\nClassification report:")
-    print(classification_report(y_test, y_pred))
+    target_names = [FATIGUE_LABELS[c] for c in pipeline.classes_]
+    print(classification_report(y_test,
+                                y_pred,
+                                labels=pipeline.classes_,
+                                target_names=target_names,
+                                zero_division=0
+                                ))
 
     # confusion matrix
     cm = confusion_matrix(y_test, y_pred, labels=pipeline.classes_)
 
     sns.heatmap(cm, annot=True, fmt="d",
-                xticklabels=pipeline.classes_,
-                yticklabels=pipeline.classes_
+                xticklabels=target_names,
+                yticklabels=target_names
                 )
     plt.title(f"Confusion Matrix - {name}")
     plt.xlabel("Predicted")
