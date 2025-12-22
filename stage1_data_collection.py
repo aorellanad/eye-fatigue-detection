@@ -7,14 +7,13 @@ from datetime import datetime
 from scipy.spatial import distance
 import os
 import uuid
-import statistics
 
 # -------------------------
 # Config
 # -------------------------
-session_id = str(uuid.uuid4())[:8]
 os.makedirs("dataset", exist_ok=True)
-CSV_FILE = f"dataset/blinks_dataset_session_{session_id}.csv"
+BLINKS_BY_MINUTE_FILE = f"dataset/blinks_by_minute.csv"
+SESSION_METADATA_FILE = f"dataset/session_metadata.csv"
 SESSION_MINUTES = 5
 EAR_THRESHOLD = 0.20
 CAMERA_INDEX = 0
@@ -31,20 +30,28 @@ face_mesh = mp_face_mesh.FaceMesh(
 )
 
 # -------------------------
-# Create CSV and write header
+# Create CSVs and write headers
 # -------------------------
-if not os.path.exists(CSV_FILE):
-    with open(CSV_FILE, 'w', newline='') as f:
-        writer = csv.writer(f)
+blinks_by_minute_file_exists_and_filled = not os.path.exists(BLINKS_BY_MINUTE_FILE) or os.path.getsize(
+    BLINKS_BY_MINUTE_FILE) == 0
+
+if blinks_by_minute_file_exists_and_filled:
+    with open(BLINKS_BY_MINUTE_FILE, mode='w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f, delimiter=';')
         writer.writerow([
             'session_id', 'participant_id', 'date', 'time_of_day', 'minute_index',
-            'blink_count', 'blink_rate', 'raw_blink_timestamps',
-            'total_blinks', 'avg_blinks', 'std_blinks',
-            'age', 'glasses', 'hours_sleep', 'caffeine_last_6h',
-            'task', 'lighting',
-            'self_report_score', 'self_report_label',
-            'auto_score', 'auto_label',
-            'notes'
+            'blink_count', 'blink_rate', 'raw_blink_timestamps'
+        ])
+
+session_metadata_file_exists_and_filled = not os.path.exists(SESSION_METADATA_FILE) or os.path.getsize(
+    SESSION_METADATA_FILE) == 0
+
+if session_metadata_file_exists_and_filled:
+    with open(SESSION_METADATA_FILE, mode='w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f, delimiter=';')
+        writer.writerow([
+            'session_id', 'participant_id', 'date', 'time_of_day', 'baseline_blinks', 'age', 'glasses', 'hours_sleep',
+            'caffeine_last_6h', 'task', 'lighting', 'self_report_initial_score', 'self_report_final_score',
         ])
 
 
@@ -52,10 +59,10 @@ if not os.path.exists(CSV_FILE):
 # Calculate EAR
 # -------------------------
 def eye_aspect_ratio(eye):
-    A = distance.euclidean(eye[1], eye[5])
-    B = distance.euclidean(eye[2], eye[4])
-    C = distance.euclidean(eye[0], eye[3])
-    return (A + B) / (2.0 * C) if C != 0 else 0
+    a = distance.euclidean(eye[1], eye[5])
+    b = distance.euclidean(eye[2], eye[4])
+    c = distance.euclidean(eye[0], eye[3])
+    return (a + b) / (2.0 * c) if c != 0 else 0
 
 
 left_eye_idx = [33, 160, 158, 133, 153, 144]
@@ -65,61 +72,19 @@ right_eye_idx = [263, 387, 385, 362, 380, 373]
 # -------------------------
 # Draw eye contours on window
 # -------------------------
-def draw_eye_contours(frame, eye_points, color=(0, 255, 0)):
+def draw_eye_contours(result_frame, eye_points, color=(0, 255, 0)):
     for (x, y) in eye_points:
-        cv2.circle(frame, (x, y), 2, color, -1)
+        cv2.circle(result_frame, (x, y), 2, color, -1)
     if len(eye_points) > 1:
         pts = eye_points + [eye_points[0]]
         for i in range(len(pts) - 1):
-            cv2.line(frame, pts[i], pts[i + 1], color, 1)
-
-
-# -------------------------
-# Subjective label
-# -------------------------
-def map_self_label(score:int):
-    if score <= 2: return "normal"
-    if score == 3: return "moderated"
-    return "tired"
-
-
-# -------------------------
-# Calculate auto score
-# -------------------------
-def score_from_avg(avg_blinks):
-    if avg_blinks < 10:
-        return 1
-    elif avg_blinks < 20:
-        return 2
-    elif avg_blinks < 30:
-        return 3
-    elif avg_blinks < 40:
-        return 4
-    else:
-        return 5
-
-
-def penalty_from_std(std_blinks):
-    if std_blinks < 3:
-        return 0
-    elif std_blinks < 6:
-        return 1
-    else:
-        return 2
-
-
-def score_to_label(score):
-    if score <= 2:
-        return "normal"
-    elif score == 3:
-        return "moderated"
-    else:
-        return "tired"
+            cv2.line(result_frame, pts[i], pts[i + 1], color, 1)
 
 
 # -------------------------
 # User metadata input
 # -------------------------
+session_id = str(uuid.uuid4())[:8]
 print("\n--- User metadata (fill the fields) ---")
 participant_id = input("User id (e.g: P01): ").strip()
 age = input("Age (optional): ").strip()
@@ -128,7 +93,8 @@ hours_sleep = input("Hours of sleep last night (optional): ").strip()
 caffeine = input("Had caffeine in last 6h? (yes/no): ").strip().lower()
 task = input("Task (work/entertainment/other): ").strip()
 lighting = input("Lighting (neutral/dim/bright/backlight): ").strip()
-notes = input("Notes (optional): ").strip()
+initial_score = int(
+    input("Initial self-report Likert (0 - No fatigue, 1 - Slight fatigue, 2 - Moderated fatigue, 3 - High Fatigue): "))
 
 print(f"\nStarting session {session_id} for participant {participant_id}. Baseline 1 minute... (press 'q' to abort)\n")
 
@@ -263,18 +229,12 @@ while time.time() < session_end:
     # Check if minute ended
     if time.time() >= current_minute_end:
         per_minute_counts.append(minute_blinks)
-        blink_rate = minute_blinks
-        with open(CSV_FILE, 'a', newline='') as f:
-            writer = csv.writer(f)
+        with open(BLINKS_BY_MINUTE_FILE, 'a', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f, delimiter=';')
             writer.writerow([
-                session_id, participant_id, datetime.now().strftime("%Y-%m-%d"),
+                session_id, participant_id, datetime.now().strftime("%d/%m/%y"),
                 datetime.now().strftime("%H:%M:%S"), minute,
-                minute_blinks, blink_rate, json.dumps(raw_timestamps_by_minute),
-                "", "", "",
-                age, glasses, hours_sleep, caffeine,
-                task, lighting,
-                "", "", "", "",
-                notes
+                minute_blinks, json.dumps(raw_timestamps_by_minute),
             ])
         print(f"{minute} min: {minute_blinks} saved blinks.")
         minute += 1
@@ -294,59 +254,31 @@ while time.time() < session_end:
 cv2.destroyWindow(session_window)
 
 # -------------------------
-# Final calculations
-# -------------------------
-total_blinks = sum(per_minute_counts)
-avg_blinks = total_blinks / len(per_minute_counts) if len(per_minute_counts) > 0 else 0
-std_blinks = statistics.pstdev(per_minute_counts) if len(per_minute_counts) > 1 else 0
-
-print(f"\nTotal blinks: {total_blinks}")
-print(f"Average by min: {avg_blinks:.2f}")
-print(f"Standard deviation: {std_blinks:.2f}")
-
-# -------------------------
 # Self-report score
 # -------------------------
 while True:
     try:
-        score = int(input("\nSelf-report Likert (1-5): "))
-        if 1 <= score <= 5:
+        final_score = int(input(
+            "\nfinal self-report Likert (0 - No fatigue, 1 - Slight fatigue, 2 - Moderated fatigue, 3 - High Fatigue): "))
+        if 1 <= final_score <= 5:
             break
     except:
         pass
 
-self_label = map_self_label(score)
-
-# -------------------------
-# Automatic score
-# -------------------------
-auto_score = score_from_avg(avg_blinks) + penalty_from_std(std_blinks)
-auto_score = min(auto_score, 5)
-auto_label = score_to_label(auto_score)
-
-print("\n--- Complementary results ---")
-print(f"Auto score: {auto_score}")
-print(f"Auto score label: {auto_label}")
-
 # -------------------------
 # Save session summary
 # -------------------------
-with open(CSV_FILE, 'a', newline='') as f:
-    writer = csv.writer(f)
+with open(SESSION_METADATA_FILE, 'a', newline='', encoding='utf-8') as f:
+    writer = csv.writer(f, delimiter=';')
     writer.writerow([
-        session_id, participant_id, datetime.now().strftime("%Y-%m-%d"),
-        datetime.now().strftime("%H:%M:%S"), "session_summary",
-        "", "", json.dumps(raw_timestamps),
-        total_blinks, f"{avg_blinks:.2f}", f"{std_blinks:.2f}",
-        age, glasses, hours_sleep, caffeine,
-        task, lighting,
-        score, self_label,
-        auto_score, auto_label,
-        f"baseline_blinks={baseline_blinks}; notes={notes}"
+        session_id, participant_id, datetime.now().strftime("%d/%m/%y"),
+        datetime.now().strftime("%H:%M:%S"), baseline_blinks, age, glasses, hours_sleep,
+        caffeine, task, lighting, initial_score, final_score,
     ])
 
 cap.release()
 face_mesh.close()
 cv2.destroyAllWindows()
-print("\nSession data saved to:", CSV_FILE)
+print("\nSession blinks data saved to:", BLINKS_BY_MINUTE_FILE)
+print("\nSession metadata saved to:", SESSION_METADATA_FILE)
 print(f"\n--- Finished session ---")
