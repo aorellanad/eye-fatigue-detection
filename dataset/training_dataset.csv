@@ -2,9 +2,11 @@ session_id;participant_id;age;glasses;hours_sleep;caffeine_last_6h;task;lighting
 01f9ac94;P01;30;Yes;8;Yes;work;neutral;5;5;40;8.0;2.12;1.6;2;2;0;0
 16829be8;P03;20;No;3;Yes;work;neutral;106;4;259;64.75;23.51;0.61;3;3;0;3
 28d26d74;P05;23;Yes;7;No;work;neutral;32;5;205;41.0;13.29;1.28;0;2;2;3
+2d5c7720;p12;36;No;8;No;work;neutral;9;4;216;54.0;57.47;6.0;1;1;0;3
 3277ef44;P08;53;Yes;8;No;work;neutral;78;4;593;148.25;66.4;1.9;0;0;0;3
 4168f027;P06;27;Yes;7;No;work;neutral;24;4;57;14.25;11.35;0.59;0;0;0;1
 47b02b77;P07;27;No;9;No;work;neutral;38;4;106;26.5;15.72;0.7;0;2;2;2
+47b20a11;P11;18;No;8;Yes;work;neutral;23;4;54;13.5;10.15;0.59;1;2;1;1
 4997df86;P01;30;Yes;6;No;work;neutral;3;3;10;3.33;1.53;1.11;0;0;0;0
 5b3a19c9;P09;33;No;6;No;work;neutral;11;5;232;46.4;37.96;4.22;0;2;2;3
 5c5ca4ca;P04;25;Yes;5;No;work;neutral;7;4;63;15.75;11.5;2.25;0;0;0;1
@@ -15,7 +17,7 @@ session_id;participant_id;age;glasses;hours_sleep;caffeine_last_6h;task;lighting
 a559b3e6;P01;30;Yes;6;No;work;neutral;3;5;45;9.0;10.32;3.0;0;0;0;0
 a5b12039;P01;30;Yes;6;No;work;neutral;0;5;17;3.4;2.51;0.0;0;0;0;0
 a6f3c46a;P01;30;Yes;7;Yes;work;neutral;5;5;29;5.8;7.29;1.16;3;3;0;0
-b124da8b;P01;30;yes;5;no;work;neutral;9;4;118;29.5;28.95;3.28;2;3;1;2
+b124da8b;P01;30;Yes;5;No;work;neutral;9;4;118;29.5;28.95;3.28;2;3;1;2
 cab7aece;P01;30;Yes;6;Yes;work;neutral;10;5;39;7.8;2.28;0.78;2;2;0;0
 cce945bf;P02;35;No;5;No;work;neutral;21;5;171;34.2;3.42;1.63;2;2;0;3
 e0189438;P01;30;Yes;8;No;work;neutral;17;5;12;2.4;1.67;0.14;2;2;0;0
