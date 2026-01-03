@@ -102,7 +102,7 @@ def draw_face_mesh_transparent(result_frame, landmarks, alpha=0.5):
         image=overlay,
         landmark_list=landmarks,
         connections=mp_face_mesh.FACEMESH_TESSELATION,
-        landmark_drawing_spec=mp_drawing.DrawingSpec(color=(255, 0, 0), thickness=1, circle_radius=1),
+        landmark_drawing_spec=mp_drawing.DrawingSpec(color=(255, 255, 0), thickness=1, circle_radius=1),
         connection_drawing_spec=mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=1),
     )
     return cv2.addWeighted(overlay, alpha, result_frame, 1 - alpha, 0)
@@ -170,7 +170,7 @@ while time.time() < baseline_end:
 
     if face_landmarks:
         face = face_landmarks[0]
-        frame = draw_face_mesh_transparent(frame, face, 0.4)
+        frame = draw_face_mesh_transparent(frame, face, 0.6)
 
         le = [(int(face.landmark[i].x * w), int(face.landmark[i].y * h)) for i in left_eye_idx]
         re = [(int(face.landmark[i].x * w), int(face.landmark[i].y * h)) for i in right_eye_idx]
@@ -235,7 +235,7 @@ while time.time() < session_end:
 
     if face_landmarks:
         face = face_landmarks[0]
-        frame = draw_face_mesh_transparent(frame, face, 0.4)
+        frame = draw_face_mesh_transparent(frame, face, 0.6)
 
         le = [(int(face.landmark[i].x * w), int(face.landmark[i].y * h)) for i in left_eye_idx]
         re = [(int(face.landmark[i].x * w), int(face.landmark[i].y * h)) for i in right_eye_idx]
