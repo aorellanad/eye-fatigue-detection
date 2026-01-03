@@ -7,52 +7,64 @@ from datetime import datetime
 from scipy.spatial import distance
 import os
 import uuid
+from typing import Any
 
 # -------------------------
 # Config
 # -------------------------
-os.makedirs("dataset", exist_ok=True)
+CAPTURES_DIR = "captures"
 BLINKS_BY_MINUTE_FILE = f"dataset/blinks_by_minute.csv"
 SESSION_METADATA_FILE = f"dataset/session_metadata.csv"
 SESSION_MINUTES = 5
 EAR_THRESHOLD = 0.20
 CAMERA_INDEX = 0
 
+os.makedirs("dataset", exist_ok=True)
+os.makedirs(CAPTURES_DIR, exist_ok=True)
+
+BLINKS_BY_MINUTE_HEADERS = [
+    'session_id', 'participant_id', 'date', 'time_of_day', 'minute_index',
+    'blink_count', 'blink_rate', 'raw_blink_timestamps'
+]
+SESSION_METADATA_HEADERS = [
+    'session_id', 'participant_id', 'date', 'time_of_day', 'baseline_blinks', 'age', 'glasses', 'hours_sleep',
+    'caffeine_last_6h', 'task', 'lighting', 'self_report_initial_score', 'self_report_final_score',
+]
+
 # -------------------------
 # Start MediaPipe Face Mesh
 # -------------------------
 mp_face_mesh = mp.solutions.face_mesh
+mp_drawing = mp.solutions.drawing_utils
+
 face_mesh = mp_face_mesh.FaceMesh(
     max_num_faces=1,
     refine_landmarks=True,
     min_detection_confidence=0.5,
-    min_tracking_confidence=0.5
+    min_tracking_confidence=0.5,
 )
+
 
 # -------------------------
 # Create CSVs and write headers
 # -------------------------
+def create_header(file_path: str, headers: list[str]):
+    with open(file_path, mode='w', newline='', encoding='utf-8') as file:
+        writer_file = csv.writer(file, delimiter=';')
+        writer_file.writerow(headers)
+
+
 blinks_by_minute_file_exists_and_filled = not os.path.exists(BLINKS_BY_MINUTE_FILE) or os.path.getsize(
     BLINKS_BY_MINUTE_FILE) == 0
 
 if blinks_by_minute_file_exists_and_filled:
-    with open(BLINKS_BY_MINUTE_FILE, mode='w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f, delimiter=';')
-        writer.writerow([
-            'session_id', 'participant_id', 'date', 'time_of_day', 'minute_index',
-            'blink_count', 'blink_rate', 'raw_blink_timestamps'
-        ])
+    create_header(BLINKS_BY_MINUTE_FILE, BLINKS_BY_MINUTE_HEADERS)
 
 session_metadata_file_exists_and_filled = not os.path.exists(SESSION_METADATA_FILE) or os.path.getsize(
     SESSION_METADATA_FILE) == 0
 
 if session_metadata_file_exists_and_filled:
-    with open(SESSION_METADATA_FILE, mode='w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f, delimiter=';')
-        writer.writerow([
-            'session_id', 'participant_id', 'date', 'time_of_day', 'baseline_blinks', 'age', 'glasses', 'hours_sleep',
-            'caffeine_last_6h', 'task', 'lighting', 'self_report_initial_score', 'self_report_final_score',
-        ])
+    create_header(SESSION_METADATA_FILE, SESSION_METADATA_HEADERS)
 
 
 # -------------------------
@@ -79,6 +91,31 @@ def draw_eye_contours(result_frame, eye_points, color=(0, 255, 0)):
         pts = eye_points + [eye_points[0]]
         for i in range(len(pts) - 1):
             cv2.line(result_frame, pts[i], pts[i + 1], color, 1)
+
+
+# -------------------------
+# Draw face mesh on window
+# -------------------------
+def draw_face_mesh_transparent(result_frame, landmarks, alpha=0.5):
+    overlay = result_frame.copy()
+    mp_drawing.draw_landmarks(
+        image=overlay,
+        landmark_list=landmarks,
+        connections=mp_face_mesh.FACEMESH_TESSELATION,
+        landmark_drawing_spec=mp_drawing.DrawingSpec(color=(255, 0, 0), thickness=1, circle_radius=1),
+        connection_drawing_spec=mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=1),
+    )
+    return cv2.addWeighted(overlay, alpha, result_frame, 1 - alpha, 0)
+
+
+# -------------------------
+# Save capture to file
+# -------------------------
+def save_capture(capture, phase: str, session_id: str):
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"{CAPTURES_DIR}/session_{session_id}_{phase}_{timestamp}.jpg"
+    cv2.imwrite(filename, capture)
+    print(f"Capture saved: {filename}")
 
 
 # -------------------------
@@ -128,10 +165,12 @@ while time.time() < baseline_end:
 
     h, w, _ = frame.shape
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    results = face_mesh.process(rgb)
+    results: Any = face_mesh.process(rgb)
+    face_landmarks = getattr(results, "multi_face_landmarks", None)
 
-    if results.multi_face_landmarks:
-        face = results.multi_face_landmarks[0]
+    if face_landmarks:
+        face = face_landmarks[0]
+        frame = draw_face_mesh_transparent(frame, face, 0.4)
 
         le = [(int(face.landmark[i].x * w), int(face.landmark[i].y * h)) for i in left_eye_idx]
         re = [(int(face.landmark[i].x * w), int(face.landmark[i].y * h)) for i in right_eye_idx]
@@ -145,7 +184,7 @@ while time.time() < baseline_end:
         # Show EAR and baseline blinks
         cv2.putText(frame, f"EAR: {ear:.3f}", (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 0), 2)
         cv2.putText(frame, f"Baseline blinks: {baseline_blinks}", (20, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.8,
-                    (200, 200, 200), 2)
+                    (255, 255, 0), 2)
 
         # Blink counting logic
         if ear < EAR_THRESHOLD and not blink_in_progress:
@@ -191,10 +230,12 @@ while time.time() < session_end:
 
     h, w, _ = frame.shape
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    results = face_mesh.process(rgb)
+    results: Any = face_mesh.process(rgb)
+    face_landmarks = getattr(results, "multi_face_landmarks", None)
 
-    if results.multi_face_landmarks:
-        face = results.multi_face_landmarks[0]
+    if face_landmarks:
+        face = face_landmarks[0]
+        frame = draw_face_mesh_transparent(frame, face, 0.4)
 
         le = [(int(face.landmark[i].x * w), int(face.landmark[i].y * h)) for i in left_eye_idx]
         re = [(int(face.landmark[i].x * w), int(face.landmark[i].y * h)) for i in right_eye_idx]
@@ -244,12 +285,15 @@ while time.time() < session_end:
 
     # Show session window
     cv2.imshow(session_window, frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord('q'):
         print("Aborted by user during session.")
         cap.release()
         face_mesh.close()
         cv2.destroyAllWindows()
         exit(0)
+    elif key == ord('c'):
+        save_capture(frame, "session", session_id)
 
 cv2.destroyWindow(session_window)
 
